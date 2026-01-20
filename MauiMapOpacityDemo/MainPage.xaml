@@ -46,6 +46,12 @@
                 <Button Text="3. Check Count"
                         Clicked="OnCountClicked"/>
             </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,5,0,0">
+                <Button Text="Clear (transparent first - FAILS)"
+                        Clicked="OnClearWithWorkaroundClicked"
+                        BackgroundColor="#607D8B"
+                        TextColor="White"/>
+            </HorizontalStackLayout>
 
             <!-- Bug 2: Property updates don't sync to native -->
             <Label Text="BUG 2: Property changes don't update native polygons"

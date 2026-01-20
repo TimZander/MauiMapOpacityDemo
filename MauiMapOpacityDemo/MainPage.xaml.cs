@@ -95,6 +95,41 @@ public partial class MainPage : ContentPage
     }
 
     /// <summary>
+    /// Attempt workaround: make polygons invisible before clearing.
+    /// RESULT: Does NOT work - property changes don't sync to native (BUG 2).
+    ///
+    /// Note: The workaround in issue #30097 uses native Google Maps objects directly
+    /// (Visible property and Remove() method), which isn't accessible through MAUI's
+    /// MapElement abstraction. MapElement inherits from Element, not VisualElement,
+    /// so it has no IsVisible property.
+    /// </summary>
+    private void OnClearWithWorkaroundClicked(object? sender, EventArgs e)
+    {
+        Console.WriteLine("=== CLEAR WITH WORKAROUND ATTEMPT ===");
+        Console.WriteLine($"Before: MapElements.Count = {TestMap.MapElements.Count}");
+        Console.WriteLine("Trying: Set colors transparent + StrokeWidth=0, then Clear()");
+
+        // Attempt workaround: make visually invisible before clearing
+        // RESULT: Does NOT work because property changes don't sync to native (BUG 2)
+        foreach (MapElement element in TestMap.MapElements)
+        {
+            if (element is Polygon polygon)
+            {
+                polygon.FillColor = Colors.Transparent;
+                polygon.StrokeColor = Colors.Transparent;
+                polygon.StrokeWidth = 0;
+                Console.WriteLine($"Set transparent colors on polygon {polygon.GetHashCode()}");
+            }
+        }
+
+        TestMap.MapElements.Clear();
+
+        Console.WriteLine($"After: MapElements.Count = {TestMap.MapElements.Count}");
+        Console.WriteLine("RESULT: Polygons still visible - workaround requires native object access");
+        StatusLabel.Text = $"Workaround FAILED. Count = {TestMap.MapElements.Count}. Requires native handler access.";
+    }
+
+    /// <summary>
     /// Check current count of map elements.
     /// </summary>
     private void OnCountClicked(object? sender, EventArgs e)

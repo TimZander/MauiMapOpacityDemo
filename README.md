@@ -94,7 +94,7 @@ dotnet build -t:Run -f net9.0-android
 
 ## Workarounds Attempted (All Failed)
 
-We tested many workarounds - none successfully clear the "ghost" polygons:
+We tested many workarounds - none successfully clear the "ghost" polygons via MAUI APIs:
 
 | Workaround | Result |
 |------------|--------|
@@ -104,8 +104,14 @@ We tested many workarounds - none successfully clear the "ghost" polygons:
 | Move map far away with `MoveToRegion()` | No effect |
 | Nudge map position slightly | No effect |
 | Remove elements one-by-one instead of Clear() | No effect |
-| Set polygon colors to transparent | MAUI property changes, native doesn't |
+| Set polygon colors to transparent before Clear() | No effect (BUG 2 - property changes don't sync) |
 | Create entirely new Map control | Failed with MauiContext error |
+
+### Note on Issue #30097 Workaround
+
+The workaround described in [#30097](https://github.com/dotnet/maui/issues/30097) sets `Visible = false` and calls `Remove()` on elements. This works because it accesses **native Google Maps objects directly**, not the MAUI `MapElement` abstraction.
+
+MAUI's `MapElement` inherits from `Element` (not `VisualElement`), so it has no `IsVisible` property. To use the #30097 workaround, you must write a custom handler that accesses native platform objects.
 
 ## Platform Notes
 
