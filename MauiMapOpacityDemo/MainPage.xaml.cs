@@ -1,36 +1,29 @@
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Maps;
-using Map = Microsoft.Maui.Controls.Maps.Map;
 
 namespace MauiMapOpacityDemo;
 
 /// <summary>
-/// Demo page to reproduce MAUI map polygon opacity rendering issues.
+/// Minimal reproduction for MAUI Maps polygon bugs on Android.
 ///
-/// ISSUE: Polygons added to a MAUI Map control may render with incorrect opacity,
-/// appearing fully opaque even when FillColor has an alpha channel less than 1.0.
+/// BUG 1: MapElements.Clear() removes items from the collection (Count becomes 0),
+///        but the native Google Map still displays the polygon visuals.
 ///
-/// This demo tests various scenarios:
-/// 1. Adding polygons immediately
-/// 2. Adding polygons after a delay
-/// 3. "Nudging" the map to force a redraw
-/// 4. Clearing and re-adding polygons
+/// BUG 2: Changing polygon properties (FillColor, StrokeColor) updates the MAUI object,
+///        but the native Google Map polygon is not updated to reflect the changes.
 ///
-/// NOTE: Windows does not support MapElements (Polygon, Polyline, Circle).
-/// This is a known limitation - see https://github.com/CommunityToolkit/Maui/issues/1711
+/// Platform: Android (Google Maps)
+/// MAUI Version: 9.0.0
 /// </summary>
 public partial class MainPage : ContentPage
 {
-    // Denver, CO area - center point for demo
+    // Denver, CO - center point for test polygons
     private const double CenterLat = 39.7392;
     private const double CenterLon = -104.9903;
-
-    private bool _isWindows;
 
     public MainPage()
     {
         InitializeComponent();
-        _isWindows = DeviceInfo.Platform == DevicePlatform.WinUI;
     }
 
     protected override void OnAppearing()
@@ -41,194 +34,140 @@ public partial class MainPage : ContentPage
         Location center = new Location(CenterLat, CenterLon);
         MapSpan mapSpan = MapSpan.FromCenterAndRadius(center, Distance.FromMiles(15));
         TestMap.MoveToRegion(mapSpan);
-
-        if (_isWindows)
-        {
-            StatusLabel.Text = "WARNING: Windows does not support map polygons. Test on Android/iOS.";
-            StatusLabel.TextColor = Colors.Red;
-            PolygonInfoLabel.Text = "MapElements (Polygon, Polyline, Circle) throw NotImplementedException on Windows.";
-        }
-        else
-        {
-            StatusLabel.Text = "Map centered on Denver, CO. Tap 'Add Polygons' to test.";
-        }
     }
 
     /// <summary>
-    /// Test 1: Add polygons immediately without any delay.
-    /// This is the simplest case and often shows the opacity bug.
+    /// Add 3 test polygons with different colors and 50% opacity.
     /// </summary>
-    private async void OnAddPolygonsClicked(object? sender, EventArgs e)
+    private void OnAddPolygonsClicked(object? sender, EventArgs e)
     {
-        if (_isWindows)
+        Console.WriteLine("=== ADD POLYGONS ===");
+        Console.WriteLine($"Before: MapElements.Count = {TestMap.MapElements.Count}");
+
+        // Only add if not already present
+        if (TestMap.MapElements.Count > 0)
         {
-            await DisplayAlert("Not Supported",
-                "Windows does not support map polygons.\n\n" +
-                "MapElements (Polygon, Polyline, Circle) are not implemented for the Windows platform.\n\n" +
-                "Please test on Android or iOS.", "OK");
+            StatusLabel.Text = "Polygons already added. Clear first or restart app.";
             return;
         }
 
-        ClearPolygons();
-        AddTestPolygons();
-        StatusLabel.Text = $"Added 3 polygons at {DateTime.Now:HH:mm:ss}. Check if opacity is correct.";
+        // Red polygon (northwest)
+        Polygon redPolygon = CreatePolygon(
+            CenterLat + 0.05, CenterLon - 0.08,
+            Color.FromRgba(1.0, 0.0, 0.0, 0.5),
+            Colors.DarkRed);
+
+        // Green polygon (northeast)
+        Polygon greenPolygon = CreatePolygon(
+            CenterLat + 0.05, CenterLon + 0.02,
+            Color.FromRgba(0.0, 1.0, 0.0, 0.5),
+            Colors.DarkGreen);
+
+        // Blue polygon (south)
+        Polygon bluePolygon = CreatePolygon(
+            CenterLat - 0.05, CenterLon - 0.03,
+            Color.FromRgba(0.0, 0.0, 1.0, 0.5),
+            Colors.DarkBlue);
+
+        TestMap.MapElements.Add(redPolygon);
+        TestMap.MapElements.Add(greenPolygon);
+        TestMap.MapElements.Add(bluePolygon);
+
+        Console.WriteLine($"After: MapElements.Count = {TestMap.MapElements.Count}");
+        StatusLabel.Text = $"Added 3 polygons. Count = {TestMap.MapElements.Count}";
     }
 
     /// <summary>
-    /// Test 2: Add polygons after a delay.
-    /// Some users report this helps with the opacity issue.
-    /// </summary>
-    private async void OnAddWithDelayClicked(object? sender, EventArgs e)
-    {
-        if (_isWindows)
-        {
-            await DisplayAlert("Not Supported",
-                "Windows does not support map polygons. Please test on Android or iOS.", "OK");
-            return;
-        }
-
-        ClearPolygons();
-        StatusLabel.Text = "Waiting 500ms before adding polygons...";
-
-        await Task.Delay(500);
-
-        AddTestPolygons();
-        StatusLabel.Text = $"Added 3 polygons after delay at {DateTime.Now:HH:mm:ss}. Check opacity.";
-    }
-
-    /// <summary>
-    /// Test 3: Nudge the map slightly to force a redraw.
-    /// This workaround may help re-render polygons with correct opacity.
-    /// </summary>
-    private void OnNudgeMapClicked(object? sender, EventArgs e)
-    {
-        MapSpan? currentRegion = TestMap.VisibleRegion;
-        if (currentRegion != null)
-        {
-            // Nudge by a tiny amount (0.00001 degrees ≈ 1 meter)
-            Location nudgedCenter = new Location(
-                currentRegion.Center.Latitude + 0.00001,
-                currentRegion.Center.Longitude);
-            MapSpan nudgedRegion = new MapSpan(
-                nudgedCenter,
-                currentRegion.LatitudeDegrees,
-                currentRegion.LongitudeDegrees);
-            TestMap.MoveToRegion(nudgedRegion);
-
-            StatusLabel.Text = $"Map nudged at {DateTime.Now:HH:mm:ss}. Check if opacity changed.";
-        }
-    }
-
-    /// <summary>
-    /// Clear all polygons from the map.
+    /// Clear all map elements.
+    /// BUG: Count becomes 0, but polygons remain visible on native map.
     /// </summary>
     private void OnClearClicked(object? sender, EventArgs e)
     {
-        int beforeCount = TestMap.MapElements.Count;
-        ClearPolygons();
-        int afterCount = TestMap.MapElements.Count;
-        StatusLabel.Text = $"Clear: {beforeCount} → {afterCount} elements. Visual count may differ (BUG).";
-    }
-
-    private void ClearPolygons()
-    {
-        System.Diagnostics.Debug.WriteLine($"[Clear] Before: {TestMap.MapElements.Count} elements");
-
-        // Try disconnecting handlers first (workaround for Issue #22510)
-        foreach (MapElement element in TestMap.MapElements.ToList())
-        {
-            System.Diagnostics.Debug.WriteLine($"[Clear] Disconnecting handler for {element.GetType().Name}");
-            element.Handler?.DisconnectHandler();
-        }
+        Console.WriteLine("=== CLEAR ===");
+        Console.WriteLine($"Before Clear(): MapElements.Count = {TestMap.MapElements.Count}");
 
         TestMap.MapElements.Clear();
-        System.Diagnostics.Debug.WriteLine($"[Clear] After Clear(): {TestMap.MapElements.Count} elements");
+
+        Console.WriteLine($"After Clear(): MapElements.Count = {TestMap.MapElements.Count}");
+        Console.WriteLine("BUG: If polygons are still visible, the native map was not updated!");
+
+        StatusLabel.Text = $"Clear() called. Count = {TestMap.MapElements.Count}. Check if polygons still visible (BUG).";
     }
 
     /// <summary>
-    /// Alternative clear: Remove elements one by one.
-    /// </summary>
-    private void OnClearOneByOneClicked(object? sender, EventArgs e)
-    {
-        int beforeCount = TestMap.MapElements.Count;
-
-        System.Diagnostics.Debug.WriteLine($"[ClearOneByOne] Before: {beforeCount} elements");
-
-        while (TestMap.MapElements.Count > 0)
-        {
-            MapElement element = TestMap.MapElements[0];
-            System.Diagnostics.Debug.WriteLine($"[ClearOneByOne] Removing {element.GetType().Name}");
-            element.Handler?.DisconnectHandler();
-            TestMap.MapElements.RemoveAt(0);
-        }
-
-        int afterCount = TestMap.MapElements.Count;
-        System.Diagnostics.Debug.WriteLine($"[ClearOneByOne] After: {afterCount} elements");
-
-        StatusLabel.Text = $"Clear 1-by-1: {beforeCount} → {afterCount} elements. Check visuals.";
-    }
-
-    /// <summary>
-    /// Show current element count.
+    /// Check current count of map elements.
     /// </summary>
     private void OnCountClicked(object? sender, EventArgs e)
     {
         int count = TestMap.MapElements.Count;
+        Console.WriteLine($"MapElements.Count = {count}");
         StatusLabel.Text = $"MapElements.Count = {count}";
-        System.Diagnostics.Debug.WriteLine($"[Count] MapElements.Count = {count}");
     }
 
     /// <summary>
-    /// Add three test polygons with different opacity levels.
-    ///
-    /// Expected result:
-    /// - Red polygon: 25% opacity (0.25 alpha) - should be very transparent
-    /// - Green polygon: 50% opacity (0.50 alpha) - should be semi-transparent
-    /// - Blue polygon: 75% opacity (0.75 alpha) - should be mostly opaque
-    ///
-    /// BUG: All three may render as fully opaque (100% opacity).
+    /// Set FillColor alpha to 0 on all polygons (should make them invisible).
+    /// BUG: MAUI property changes, but native polygon remains visible.
     /// </summary>
-    private void AddTestPolygons()
+    private void OnSetAlphaZeroClicked(object? sender, EventArgs e)
     {
-        // Polygon 1: RED with 25% opacity
-        Polygon redPolygon = CreatePolygon(
-            centerLat: CenterLat + 0.05,
-            centerLon: CenterLon - 0.08,
-            fillColor: Color.FromRgba(1.0, 0.0, 0.0, 0.25),  // Red, 25% opacity
-            strokeColor: Colors.DarkRed,
-            label: "Red 25%");
+        Console.WriteLine("=== SET ALPHA TO 0 ===");
 
-        // Polygon 2: GREEN with 50% opacity
-        Polygon greenPolygon = CreatePolygon(
-            centerLat: CenterLat + 0.05,
-            centerLon: CenterLon + 0.02,
-            fillColor: Color.FromRgba(0.0, 1.0, 0.0, 0.50),  // Green, 50% opacity
-            strokeColor: Colors.DarkGreen,
-            label: "Green 50%");
+        if (TestMap.MapElements.Count == 0)
+        {
+            StatusLabel.Text = "No polygons to update. Add polygons first.";
+            return;
+        }
 
-        // Polygon 3: BLUE with 75% opacity
-        Polygon bluePolygon = CreatePolygon(
-            centerLat: CenterLat - 0.05,
-            centerLon: CenterLon - 0.03,
-            fillColor: Color.FromRgba(0.0, 0.0, 1.0, 0.75),  // Blue, 75% opacity
-            strokeColor: Colors.DarkBlue,
-            label: "Blue 75%");
+        foreach (MapElement element in TestMap.MapElements)
+        {
+            if (element is Polygon polygon)
+            {
+                Color oldFill = polygon.FillColor;
+                Color oldStroke = polygon.StrokeColor;
 
-        // Log the actual color values for debugging
-        LogPolygonColor("Red", redPolygon.FillColor);
-        LogPolygonColor("Green", greenPolygon.FillColor);
-        LogPolygonColor("Blue", bluePolygon.FillColor);
+                // Set alpha to 0 (should make polygon invisible)
+                polygon.FillColor = Color.FromRgba(oldFill.Red, oldFill.Green, oldFill.Blue, 0.0);
+                polygon.StrokeColor = Color.FromRgba(oldStroke.Red, oldStroke.Green, oldStroke.Blue, 0.0);
 
-        // Add to map
-        TestMap.MapElements.Add(redPolygon);
-        TestMap.MapElements.Add(greenPolygon);
-        TestMap.MapElements.Add(bluePolygon);
+                Console.WriteLine($"Polygon {polygon.GetHashCode()}: Set alpha to 0");
+                Console.WriteLine($"  FillColor.Alpha is now: {polygon.FillColor.Alpha}");
+            }
+        }
+
+        Console.WriteLine("BUG: If polygons are still visible, the native map was not updated!");
+        StatusLabel.Text = "Set Alpha=0 on all polygons. They should be invisible (but aren't - BUG).";
     }
 
-    private Polygon CreatePolygon(double centerLat, double centerLon, Color fillColor, Color strokeColor, string label)
+    /// <summary>
+    /// Print diagnostic info showing MAUI state vs visual state.
+    /// </summary>
+    private void OnDiagnosticsClicked(object? sender, EventArgs e)
     {
-        // Create a simple square polygon
-        double size = 0.04; // ~4km
+        Console.WriteLine("=== DIAGNOSTICS ===");
+        Console.WriteLine($"MapElements.Count: {TestMap.MapElements.Count}");
+        Console.WriteLine($"Map.Handler: {TestMap.Handler?.GetType().Name ?? "null"}");
+
+        for (int i = 0; i < TestMap.MapElements.Count; i++)
+        {
+            if (TestMap.MapElements[i] is Polygon p)
+            {
+                Console.WriteLine($"[{i}] Polygon:");
+                Console.WriteLine($"    FillColor: R={p.FillColor.Red:F2} G={p.FillColor.Green:F2} B={p.FillColor.Blue:F2} A={p.FillColor.Alpha:F2}");
+                Console.WriteLine($"    StrokeColor: R={p.StrokeColor.Red:F2} G={p.StrokeColor.Green:F2} B={p.StrokeColor.Blue:F2} A={p.StrokeColor.Alpha:F2}");
+                Console.WriteLine($"    Handler: {p.Handler?.GetType().Name ?? "null"}");
+            }
+        }
+
+        Console.WriteLine("");
+        Console.WriteLine("If Alpha=0.00 above but polygons are visible on map,");
+        Console.WriteLine("the MapElementHandler is not syncing property changes to native GoogleMap.");
+
+        StatusLabel.Text = "Diagnostics printed to console. Check output.";
+    }
+
+    private Polygon CreatePolygon(double centerLat, double centerLon, Color fillColor, Color strokeColor)
+    {
+        double size = 0.04; // ~4km square
 
         Polygon polygon = new Polygon
         {
@@ -237,18 +176,11 @@ public partial class MainPage : ContentPage
             StrokeWidth = 3
         };
 
-        // Add corners (square shape)
-        polygon.Geopath.Add(new Location(centerLat + size, centerLon - size)); // Top-left
-        polygon.Geopath.Add(new Location(centerLat + size, centerLon + size)); // Top-right
-        polygon.Geopath.Add(new Location(centerLat - size, centerLon + size)); // Bottom-right
-        polygon.Geopath.Add(new Location(centerLat - size, centerLon - size)); // Bottom-left
+        polygon.Geopath.Add(new Location(centerLat + size, centerLon - size));
+        polygon.Geopath.Add(new Location(centerLat + size, centerLon + size));
+        polygon.Geopath.Add(new Location(centerLat - size, centerLon + size));
+        polygon.Geopath.Add(new Location(centerLat - size, centerLon - size));
 
         return polygon;
-    }
-
-    private void LogPolygonColor(string name, Color color)
-    {
-        System.Diagnostics.Debug.WriteLine(
-            $"[PolygonOpacity] {name} polygon - R:{color.Red:F2} G:{color.Green:F2} B:{color.Blue:F2} A:{color.Alpha:F2}");
     }
 }

@@ -3,19 +3,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
              x:Class="MauiMapOpacityDemo.MainPage"
-             Title="Map Polygon Opacity Demo">
+             Title="MAUI Maps Polygon Bug Repro">
 
     <Grid RowDefinitions="Auto,*,Auto">
 
         <!-- Header -->
         <VerticalStackLayout Grid.Row="0" Padding="10" BackgroundColor="#f0f0f0">
-            <Label Text="MAUI Map Polygon Opacity Test"
+            <Label Text="MapElements Clear/Update Bug"
                    FontSize="18"
                    FontAttributes="Bold"
                    HorizontalOptions="Center"/>
             <Label x:Name="StatusLabel"
-                   Text="Tap 'Add Polygons' to test opacity rendering"
-                   FontSize="12"
+                   Text="Demonstrates that MapElements changes don't sync to native map"
+                   FontSize="11"
                    HorizontalOptions="Center"
                    TextColor="Gray"/>
         </VerticalStackLayout>
@@ -31,33 +31,43 @@
         <!-- Controls -->
         <VerticalStackLayout Grid.Row="2" Padding="10" Spacing="8" BackgroundColor="#f0f0f0">
 
+            <!-- Bug 1: Clear doesn't remove native polygons -->
+            <Label Text="BUG 1: Clear() doesn't remove native polygons"
+                   FontSize="11" FontAttributes="Bold" HorizontalOptions="Center"/>
             <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
-                <Button x:Name="AddPolygonsButton"
-                        Text="Add Polygons"
-                        Clicked="OnAddPolygonsClicked"/>
-                <Button x:Name="ClearButton"
-                        Text="Clear()"
-                        Clicked="OnClearClicked"/>
-                <Button x:Name="ClearOneByOneButton"
-                        Text="Clear 1-by-1"
-                        Clicked="OnClearOneByOneClicked"/>
-            </HorizontalStackLayout>
-
-            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
-                <Button x:Name="AddWithDelayButton"
-                        Text="Add w/Delay"
-                        Clicked="OnAddWithDelayClicked"/>
-                <Button x:Name="NudgeMapButton"
-                        Text="Nudge"
-                        Clicked="OnNudgeMapClicked"/>
-                <Button x:Name="CountButton"
-                        Text="Count"
+                <Button Text="1. Add 3 Polygons"
+                        Clicked="OnAddPolygonsClicked"
+                        BackgroundColor="#2196F3"
+                        TextColor="White"/>
+                <Button Text="2. Clear()"
+                        Clicked="OnClearClicked"
+                        BackgroundColor="#f44336"
+                        TextColor="White"/>
+                <Button Text="3. Check Count"
                         Clicked="OnCountClicked"/>
             </HorizontalStackLayout>
 
-            <Label x:Name="PolygonInfoLabel"
-                   Text="Expected: Red (25%), Green (50%), Blue (75%) opacity"
-                   FontSize="11"
+            <!-- Bug 2: Property updates don't sync to native -->
+            <Label Text="BUG 2: Property changes don't update native polygons"
+                   FontSize="11" FontAttributes="Bold" HorizontalOptions="Center" Margin="0,10,0,0"/>
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                <Button Text="1. Add Polygons"
+                        Clicked="OnAddPolygonsClicked"
+                        BackgroundColor="#2196F3"
+                        TextColor="White"/>
+                <Button Text="2. Set Alpha=0"
+                        Clicked="OnSetAlphaZeroClicked"
+                        BackgroundColor="#ff9800"
+                        TextColor="White"/>
+                <Button Text="3. Diagnostics"
+                        Clicked="OnDiagnosticsClicked"
+                        BackgroundColor="#9c27b0"
+                        TextColor="White"/>
+            </HorizontalStackLayout>
+
+            <Label x:Name="InfoLabel"
+                   Text="After Clear: Count=0 but polygons still visible. After Alpha=0: MAUI property is 0 but polygons still visible."
+                   FontSize="10"
                    HorizontalOptions="Center"
                    TextColor="DarkSlateGray"/>
         </VerticalStackLayout>
