@@ -108,9 +108,17 @@ map.MapElements.Clear();
 
 | Platform | Map Provider | Polygon Support | Notes |
 |----------|--------------|-----------------|-------|
-| Android | Google Maps | Yes | Requires API key |
-| iOS | Apple Maps | Yes | No API key needed |
-| Windows | Bing Maps | Limited | May not render elements properly |
+| Android | Google Maps | **Yes** | Requires API key - **use for testing** |
+| iOS | Apple Maps | **Yes** | No API key needed - **use for testing** |
+| Windows | Bing Maps | **NO** | `NotImplementedException` - cannot test |
+
+### Windows Limitation
+
+**Windows cannot be used to test this issue.** The MAUI Maps control on Windows throws `NotImplementedException` when adding any `MapElement` (Polygon, Polyline, Circle). This is a known limitation documented in [CommunityToolkit issue #1711](https://github.com/CommunityToolkit/Maui/issues/1711).
+
+The maintainer confirmed: *"From looking at the code this was indeed never implemented on our side for Windows."*
+
+**You must test on Android or iOS to reproduce the polygon opacity issue.**
 
 ## Environment
 

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             x:Class="MauiMapOpacityDemo.MainPage"
+             Title="Map Polygon Opacity Demo">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header -->
+        <VerticalStackLayout Grid.Row="0" Padding="10" BackgroundColor="#f0f0f0">
+            <Label Text="MAUI Map Polygon Opacity Test"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"/>
+            <Label x:Name="StatusLabel"
+                   Text="Tap 'Add Polygons' to test opacity rendering"
+                   FontSize="12"
+                   HorizontalOptions="Center"
+                   TextColor="Gray"/>
+        </VerticalStackLayout>
+
+        <!-- Map -->
+        <maps:Map x:Name="TestMap"
+                  Grid.Row="1"
+                  MapType="Street"
+                  IsShowingUser="False"
+                  IsScrollEnabled="True"
+                  IsZoomEnabled="True"/>
+
+        <!-- Controls -->
+        <VerticalStackLayout Grid.Row="2" Padding="10" Spacing="8" BackgroundColor="#f0f0f0">
+
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                <Button x:Name="AddPolygonsButton"
+                        Text="Add Polygons"
+                        Clicked="OnAddPolygonsClicked"/>
+                <Button x:Name="ClearButton"
+                        Text="Clear()"
+                        Clicked="OnClearClicked"/>
+                <Button x:Name="ClearOneByOneButton"
+                        Text="Clear 1-by-1"
+                        Clicked="OnClearOneByOneClicked"/>
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                <Button x:Name="AddWithDelayButton"
+                        Text="Add w/Delay"
+                        Clicked="OnAddWithDelayClicked"/>
+                <Button x:Name="NudgeMapButton"
+                        Text="Nudge"
+                        Clicked="OnNudgeMapClicked"/>
+                <Button x:Name="CountButton"
+                        Text="Count"
+                        Clicked="OnCountClicked"/>
+            </HorizontalStackLayout>
+
+            <Label x:Name="PolygonInfoLabel"
+                   Text="Expected: Red (25%), Green (50%), Blue (75%) opacity"
+                   FontSize="11"
+                   HorizontalOptions="Center"
+                   TextColor="DarkSlateGray"/>
+        </VerticalStackLayout>
+
+    </Grid>
+
+</ContentPage>
